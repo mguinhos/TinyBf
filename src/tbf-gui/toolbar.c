@@ -29,7 +29,7 @@ int tbf_gui_toolbar_rate(const TbfGui_Toolbar* self)
     return tbf_gui_toolbar_rates[self->speed];
 }
 
-static void tbf_gui_toolbar_draw_status(const TbfGui_Style* style, const TbfGui_Debugger* debugger, float x, float center_y)
+static void tbf_gui_toolbar_draw_status(const TbfGui_Style* style, const TbfGui_Debugger* debugger, TbfGui_Stack* stack)
 {
     const TbfGui_Theme* theme = style->theme;
     const char* status = "Sem programa";
@@ -65,60 +65,61 @@ static void tbf_gui_toolbar_draw_status(const TbfGui_Style* style, const TbfGui_
         break;
     }
 
-    TbfMath_Vector2 size = tbf_gui_text_size(style->fonts.label, status);
-    Rectangle chip = { x, center_y - 16, size.x + 44, 32 };
+    float width = tbf_gui_text_size(style->fonts.label, status).x;
+    Rectangle chip = tbf_gui_box_align(tbf_gui_stack_next(stack, width + 44), width + 44, 32, TBF_GUI_ALIGN_START, TBF_GUI_ALIGN_CENTER);
+    TbfGui_Stack content = tbf_gui_stack_begin(tbf_gui_box(chip, tbf_gui_insets_xy(13, 0)), TBF_GUI_STACK_HORIZONTAL, 9);
+    Rectangle dot = tbf_gui_stack_next(&content, 10);
 
     tbf_gui_rounded_lines(chip, 8, 1, theme->outline_variant);
-    tbf_gui_circle(tbf_math_vector2(chip.x + 18, center_y), 5, color);
-    tbf_gui_text(style->fonts.label, status, chip.x + 32, center_y - size.y / 2, theme->on_surface);
+    tbf_gui_circle(tbf_math_vector2(dot.x + dot.width / 2, dot.y + dot.height / 2), 5, color);
+    tbf_gui_label(style->fonts.label, status, tbf_gui_stack_rest(&content), TBF_GUI_ALIGN_START, theme->on_surface);
 }
 
 TbfGui_Action tbf_gui_toolbar_draw(const TbfGui_Toolbar* self, const TbfGui_Style* style, const TbfGui_Debugger* debugger, Rectangle rect)
 {
     const TbfGui_Theme* theme = style->theme;
     TbfGui_Action action = TBF_GUI_ACTION_NONE;
-    float x = rect.x;
-    float y = rect.y;
-    float center_y = rect.y + rect.height / 2;
+    TbfGui_Stack stack = tbf_gui_stack_begin(rect, TBF_GUI_STACK_HORIZONTAL, 8);
 
+    bool paused = debugger->state == TBF_GUI_DEBUGGER_PAUSED;
     bool running = tbf_gui_debugger_is_running(debugger);
     int run_icon = running ? TBF_GUI_ICON_PAUSE : TBF_GUI_ICON_PLAY;
     const char* run_label = running ? "Pausar (F5)" : "Executar (F5)";
 
-    if (tbf_gui_button(style, (Rectangle) { x, y, 152, 40 }, TBF_GUI_BUTTON_FILLED, run_icon, run_label, tbf_gui_debugger_can_run(debugger))) {
+    if (tbf_gui_button(style, tbf_gui_stack_next(&stack, 152), TBF_GUI_BUTTON_FILLED, run_icon, run_label, tbf_gui_debugger_can_run(debugger))) {
         action = TBF_GUI_ACTION_TOGGLE_RUN;
     }
 
-    if (tbf_gui_button(style, (Rectangle) { x + 160, y, 136, 40 }, TBF_GUI_BUTTON_TONAL, TBF_GUI_ICON_STEP, "Passo (F10)", debugger->state == TBF_GUI_DEBUGGER_PAUSED)) {
+    if (tbf_gui_button(style, tbf_gui_stack_next(&stack, 136), TBF_GUI_BUTTON_TONAL, TBF_GUI_ICON_STEP, "Passo (F10)", paused)) {
         action = TBF_GUI_ACTION_STEP;
     }
 
-    if (tbf_gui_button(style, (Rectangle) { x + 304, y, 132, 40 }, TBF_GUI_BUTTON_TONAL, TBF_GUI_ICON_SKIP, "Pular (F11)", debugger->state == TBF_GUI_DEBUGGER_PAUSED)) {
+    if (tbf_gui_button(style, tbf_gui_stack_next(&stack, 132), TBF_GUI_BUTTON_TONAL, TBF_GUI_ICON_SKIP, "Pular (F11)", paused)) {
         action = TBF_GUI_ACTION_SKIP;
     }
 
-    if (tbf_gui_button(style, (Rectangle) { x + 444, y, 156, 40 }, TBF_GUI_BUTTON_OUTLINED, TBF_GUI_ICON_RESET, "Reiniciar (F2)", debugger->loaded)) {
+    if (tbf_gui_button(style, tbf_gui_stack_next(&stack, 156), TBF_GUI_BUTTON_OUTLINED, TBF_GUI_ICON_RESET, "Reiniciar (F2)", debugger->loaded)) {
         action = TBF_GUI_ACTION_RESET;
     }
 
-    TbfMath_Vector2 caption = tbf_gui_text_size(style->fonts.body, "Velocidade");
+    tbf_gui_stack_skip(&stack, 24);
 
-    tbf_gui_text(style->fonts.body, "Velocidade", x + 632, center_y - caption.y / 2, theme->on_surface_variant);
+    const char* caption = "Velocidade";
 
-    if (tbf_gui_icon_button(style, (Rectangle) { x + 712, y, 40, 40 }, TBF_GUI_ICON_REMOVE, self->speed > 0)) {
+    tbf_gui_label(style->fonts.body, caption, tbf_gui_stack_next(&stack, tbf_gui_text_size(style->fonts.body, caption).x), TBF_GUI_ALIGN_START, theme->on_surface_variant);
+
+    if (tbf_gui_icon_button(style, tbf_gui_stack_next(&stack, 40), TBF_GUI_ICON_REMOVE, self->speed > 0)) {
         action = TBF_GUI_ACTION_SLOWER;
     }
 
-    const char* label = tbf_gui_toolbar_labels[self->speed];
-    TbfMath_Vector2 size = tbf_gui_text_size(style->fonts.label, label);
+    tbf_gui_label(style->fonts.label, tbf_gui_toolbar_labels[self->speed], tbf_gui_stack_next(&stack, 64), TBF_GUI_ALIGN_CENTER, theme->on_surface);
 
-    tbf_gui_text(style->fonts.label, label, x + 756 + (64 - size.x) / 2, center_y - size.y / 2, theme->on_surface);
-
-    if (tbf_gui_icon_button(style, (Rectangle) { x + 824, y, 40, 40 }, TBF_GUI_ICON_ADD, self->speed < TBF_GUI_TOOLBAR_SPEEDS - 1)) {
+    if (tbf_gui_icon_button(style, tbf_gui_stack_next(&stack, 40), TBF_GUI_ICON_ADD, self->speed < TBF_GUI_TOOLBAR_SPEEDS - 1)) {
         action = TBF_GUI_ACTION_FASTER;
     }
 
-    tbf_gui_toolbar_draw_status(style, debugger, x + 896, center_y);
+    tbf_gui_stack_skip(&stack, 24);
+    tbf_gui_toolbar_draw_status(style, debugger, &stack);
 
     return action;
 }

@@ -19,42 +19,42 @@ static void tbf_gui_tape_view_draw_cell(const TbfGui_Style* style, Rectangle cel
         fg = theme->on_secondary_container;
     }
 
+    Rectangle inner = tbf_gui_box(cell, (TbfGui_Insets) { 4, 6, 4, 6 });
+    TbfGui_Stack stack = tbf_gui_stack_begin(inner, TBF_GUI_STACK_VERTICAL, 0);
+    Rectangle header = tbf_gui_stack_next(&stack, style->fonts.mono_small.baseSize);
+
     tbf_gui_rounded(cell, 8, bg);
-    tbf_gui_text(style->fonts.mono_small, TextFormat("%04zX", addr), cell.x + 6, cell.y + 4, Fade(fg, 0.7f));
-
-    const char* text = TextFormat("%d", value);
-    TbfMath_Vector2 size = tbf_gui_text_size(style->fonts.mono, text);
-
-    tbf_gui_text(style->fonts.mono, text, cell.x + (cell.width - size.x) / 2, cell.y + (cell.height - size.y) / 2 + 4, fg);
+    tbf_gui_label(style->fonts.mono_small, TextFormat("%04zX", addr), header, TBF_GUI_ALIGN_START, Fade(fg, 0.7f));
 
     if (value > 0x20 && value < 0x7f) {
-        tbf_gui_char(style->fonts.mono_small, value, cell.x + cell.width - 12, cell.y + 4, fg);
+        tbf_gui_label(style->fonts.mono_small, TextFormat("%c", value), header, TBF_GUI_ALIGN_END, fg);
     }
+
+    tbf_gui_label(style->fonts.mono, TextFormat("%d", value), tbf_gui_stack_rest(&stack), TBF_GUI_ALIGN_CENTER, fg);
 }
 
 void tbf_gui_tape_view_draw(const TbfGui_Style* style, const TbfVm* vm, Rectangle rect)
 {
     const int per_page = TBF_GUI_TAPE_VIEW_COLS * TBF_GUI_TAPE_VIEW_ROWS;
-    const float gap = TBF_GUI_TAPE_VIEW_GAP;
 
     TbfAddr tp = vm ? vm->tp : 0;
     size_t start = (tp / per_page) * per_page;
 
-    tbf_gui_card(style, rect, "Memória", TextFormat("%04zX - %04zX", start, start + per_page - 1));
+    tbf_gui_card(style, rect, "Memória", vm ? TextFormat("%04zX - %04zX", start, start + per_page - 1) : NULL);
 
-    float width = (rect.width - 2 * TBF_GUI_CARD_PADDING - (TBF_GUI_TAPE_VIEW_COLS - 1) * gap) / TBF_GUI_TAPE_VIEW_COLS;
-    float height = (rect.height - TBF_GUI_CARD_HEADER - TBF_GUI_CARD_PADDING - (TBF_GUI_TAPE_VIEW_ROWS - 1) * gap) / TBF_GUI_TAPE_VIEW_ROWS;
+    Rectangle body = tbf_gui_card_body(rect);
+    float row_height = (body.height - (TBF_GUI_TAPE_VIEW_ROWS - 1) * TBF_GUI_TAPE_VIEW_GAP) / TBF_GUI_TAPE_VIEW_ROWS;
+    TbfGui_Grid grid = tbf_gui_grid_begin(body, TBF_GUI_TAPE_VIEW_COLS, TBF_GUI_TAPE_VIEW_GAP, row_height);
 
     for (int i = 0; i < per_page; i++) {
         size_t addr = start + i;
+        Rectangle cell = tbf_gui_grid_item(&grid, 1);
 
-        Rectangle cell = {
-            rect.x + TBF_GUI_CARD_PADDING + (i % TBF_GUI_TAPE_VIEW_COLS) * (width + gap),
-            rect.y + TBF_GUI_CARD_HEADER + (i / TBF_GUI_TAPE_VIEW_COLS) * (height + gap),
-            width,
-            height,
-        };
+        if (vm == NULL) {
+            tbf_gui_skeleton(style, cell, 8);
+            continue;
+        }
 
-        tbf_gui_tape_view_draw_cell(style, cell, addr, vm ? vm->tape[addr] : 0, vm && addr == tp);
+        tbf_gui_tape_view_draw_cell(style, cell, addr, vm->tape[addr], addr == tp);
     }
 }

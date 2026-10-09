@@ -13,6 +13,7 @@
 typedef struct TbfGui_App {
     TbfGui_Style style;
     TbfGui_Ripples ripples;
+    TbfGui_Skeleton skeleton;
     bool dark;
     TbfGui_Terminal terminal;
     TbfGui_Input input;

@@ -6,7 +6,9 @@
 #include "raylib.h"
 
 #include "tbf/tbf-math/tbf-math.h"
+#include "tbf/tbf-gui/layout.h"
 #include "tbf/tbf-gui/ripple.h"
+#include "tbf/tbf-gui/skeleton.h"
 #include "tbf/tbf-gui/theme.h"
 
 #define TBF_GUI_FONT_DIR        "../thirdparty/fonts/"
@@ -56,6 +58,7 @@ typedef struct TbfGui_Style {
     TbfGui_Fonts fonts;
     const TbfGui_Theme* theme;
     TbfGui_Ripples* ripples;
+    const TbfGui_Skeleton* skeleton;
 } TbfGui_Style;
 
 void tbf_gui_fonts_load(TbfGui_Fonts* self);
@@ -72,6 +75,7 @@ TbfMath_Vector2 tbf_gui_text_size(Font font, const char* text);
 void tbf_gui_text(Font font, const char* text, float x, float y, Color color);
 void tbf_gui_char(Font font, int codepoint, float x, float y, Color color);
 void tbf_gui_icon(Font font, int icon, TbfMath_Vector2 center, Color color);
+void tbf_gui_label(Font font, const char* text, Rectangle rect, TbfGui_Align align, Color color);
 
 void tbf_gui_circle(TbfMath_Vector2 center, float radius, Color color);
 
@@ -82,6 +86,10 @@ bool tbf_gui_button(const TbfGui_Style* style, Rectangle rect, TbfGui_ButtonKind
 bool tbf_gui_icon_button(const TbfGui_Style* style, Rectangle rect, int icon, bool enabled);
 bool tbf_gui_switch(const TbfGui_Style* style, Rectangle rect, bool on, int icon_on, int icon_off);
 void tbf_gui_card(const TbfGui_Style* style, Rectangle rect, const char* title, const char* subtitle);
+Rectangle tbf_gui_card_body(Rectangle card);
+TbfGui_Stack tbf_gui_card_actions(Rectangle card);
+void tbf_gui_skeleton(const TbfGui_Style* style, Rectangle rect, float radius);
+void tbf_gui_skeleton_text(const TbfGui_Style* style, Rectangle area, float line_height, int seed);
 void tbf_gui_text_field(const TbfGui_Style* style, Rectangle rect, const char* label, bool focused);
 
 #endif

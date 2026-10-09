@@ -9,6 +9,7 @@
 #include "tbf/tbf.h"
 #include "tbf/tbf-gui/debugger.h"
 #include "tbf/tbf-gui/input.h"
+#include "tbf/tbf-gui/selection.h"
 #include "tbf/tbf-gui/terminal.h"
 #include "tbf/tbf-gui/widgets.h"
 
@@ -30,10 +31,7 @@ typedef struct TbfGui_Toolbar {
 
 typedef struct TbfGui_OutputView {
     bool fullscreen;
-    bool selecting;
-    bool has_selection;
-    int anchor;
-    int head;
+    TbfGui_Selection selection;
     double copied_at;
 } TbfGui_OutputView;
 
@@ -42,6 +40,9 @@ typedef struct TbfGui_CodeView {
     size_t size;
     int scroll;
     bool follow;
+    TbfGui_Selection selection;
+    bool pressed_on_cell;
+    double copied_at;
 } TbfGui_CodeView;
 
 TbfGui_Action tbf_gui_app_bar_draw(const TbfGui_Style* style, const TbfGui_Debugger* debugger, bool dark, Rectangle rect);
@@ -60,7 +61,7 @@ void tbf_gui_code_view_draw(TbfGui_CodeView* self, const TbfGui_Style* style, Tb
 
 void tbf_gui_output_view_init(TbfGui_OutputView* self);
 void tbf_gui_output_view_toggle_fullscreen(TbfGui_OutputView* self);
-TbfGui_Action tbf_gui_output_view_draw(TbfGui_OutputView* self, const TbfGui_Style* style, const TbfGui_Terminal* terminal, bool waiting, Rectangle rect);
+TbfGui_Action tbf_gui_output_view_draw(TbfGui_OutputView* self, const TbfGui_Style* style, const TbfGui_Terminal* terminal, bool waiting, bool placeholder, Rectangle rect);
 void tbf_gui_tape_view_draw(const TbfGui_Style* style, const TbfVm* vm, Rectangle rect);
 void tbf_gui_input_view_draw(const TbfGui_Style* style, const TbfGui_Input* input, bool waiting, Rectangle rect);
 

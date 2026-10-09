@@ -167,6 +167,14 @@ void tbf_gui_icon(Font font, int icon, TbfMath_Vector2 center, Color color)
     tbf_gui_char(font, icon, center.x - font.baseSize / 2.0f, center.y - font.baseSize / 2.0f, color);
 }
 
+void tbf_gui_label(Font font, const char* text, Rectangle rect, TbfGui_Align align, Color color)
+{
+    TbfMath_Vector2 size = tbf_gui_text_size(font, text);
+    Rectangle box = tbf_gui_box_align(rect, size.x, size.y, align, TBF_GUI_ALIGN_CENTER);
+
+    tbf_gui_text(font, text, box.x, box.y, color);
+}
+
 static float tbf_gui_roundness(Rectangle rect, float radius)
 {
     float side = fminf(rect.width, rect.height);
@@ -240,21 +248,23 @@ bool tbf_gui_button(const TbfGui_Style* style, Rectangle rect, TbfGui_ButtonKind
 
     bool clicked = tbf_gui_state_layer(style, rect, radius, fg, enabled, false);
 
-    const Font font = style->fonts.label;
+    const bool has_icon = icon != TBF_GUI_ICON_NONE;
     const float icon_size = style->fonts.icons_small.baseSize;
-    const float gap = icon != TBF_GUI_ICON_NONE ? 8 : 0;
+    const float gap = 8;
 
-    TbfMath_Vector2 size = tbf_gui_text_size(font, label);
-    float width = size.x + (icon != TBF_GUI_ICON_NONE ? icon_size + gap : 0);
-    float x = rect.x + (rect.width - width) / 2;
-    float center_y = rect.y + rect.height / 2;
+    float label_width = tbf_gui_text_size(style->fonts.label, label).x;
+    float width = label_width + (has_icon ? icon_size + gap : 0);
 
-    if (icon != TBF_GUI_ICON_NONE) {
-        tbf_gui_icon(style->fonts.icons_small, icon, tbf_math_vector2(x + icon_size / 2, center_y), fg);
-        x += icon_size + gap;
+    Rectangle content = tbf_gui_box_align(rect, width, rect.height, TBF_GUI_ALIGN_CENTER, TBF_GUI_ALIGN_START);
+    TbfGui_Stack stack = tbf_gui_stack_begin(content, TBF_GUI_STACK_HORIZONTAL, gap);
+
+    if (has_icon) {
+        Rectangle slot = tbf_gui_stack_next(&stack, icon_size);
+
+        tbf_gui_icon(style->fonts.icons_small, icon, tbf_math_vector2(slot.x + slot.width / 2, slot.y + slot.height / 2), fg);
     }
 
-    tbf_gui_text(font, label, x, center_y - size.y / 2, fg);
+    tbf_gui_label(style->fonts.label, label, tbf_gui_stack_next(&stack, label_width), TBF_GUI_ALIGN_START, fg);
 
     return clicked;
 }
@@ -318,15 +328,65 @@ bool tbf_gui_switch(const TbfGui_Style* style, Rectangle rect, bool on, int icon
 void tbf_gui_card(const TbfGui_Style* style, Rectangle rect, const char* title, const char* subtitle)
 {
     const TbfGui_Theme* theme = style->theme;
-    float x = rect.x + TBF_GUI_CARD_PADDING;
-    float y = rect.y + TBF_GUI_CARD_PADDING;
+    Rectangle header = tbf_gui_box(
+        (Rectangle) { rect.x, rect.y, rect.width, TBF_GUI_CARD_HEADER },
+        tbf_gui_insets_xy(TBF_GUI_CARD_PADDING, 0)
+    );
+    TbfGui_Stack stack = tbf_gui_stack_begin(header, TBF_GUI_STACK_HORIZONTAL, 8);
 
     tbf_gui_rounded(rect, TBF_GUI_CARD_RADIUS, theme->surface_container);
-    tbf_gui_text(style->fonts.label, title, x, y, theme->on_surface);
+
+    float title_width = tbf_gui_text_size(style->fonts.label, title).x;
+
+    tbf_gui_label(style->fonts.label, title, tbf_gui_stack_next(&stack, title_width), TBF_GUI_ALIGN_START, theme->on_surface);
 
     if (subtitle != NULL) {
-        x += tbf_gui_text_size(style->fonts.label, title).x + 8;
-        tbf_gui_text(style->fonts.body, subtitle, x, y, theme->on_surface_variant);
+        tbf_gui_label(style->fonts.body, subtitle, tbf_gui_stack_rest(&stack), TBF_GUI_ALIGN_START, theme->on_surface_variant);
+    }
+}
+
+Rectangle tbf_gui_card_body(Rectangle card)
+{
+    return tbf_gui_box(card, (TbfGui_Insets) { TBF_GUI_CARD_HEADER, TBF_GUI_CARD_PADDING, TBF_GUI_CARD_PADDING, TBF_GUI_CARD_PADDING });
+}
+
+/* Ações do cabeçalho do card (botões de ícone), empilhadas da direita para a esquerda. */
+TbfGui_Stack tbf_gui_card_actions(Rectangle card)
+{
+    Rectangle header = tbf_gui_box(
+        (Rectangle) { card.x, card.y, card.width, TBF_GUI_CARD_HEADER },
+        (TbfGui_Insets) { 2, 8, 2, 8 }
+    );
+
+    return tbf_gui_stack_begin(header, TBF_GUI_STACK_HORIZONTAL_REVERSE, 4);
+}
+
+void tbf_gui_skeleton(const TbfGui_Style* style, Rectangle rect, float radius)
+{
+    Color base = style->theme->surface_container_highest;
+    Color highlight = ColorLerp(base, style->theme->on_surface, 0.18f);
+
+    tbf_gui_skeleton_draw(style->skeleton, rect, radius, base, highlight);
+}
+
+/* Linhas de texto falsas com larguras pseudoaleatórias estáveis (dependem só da linha e da semente). */
+void tbf_gui_skeleton_text(const TbfGui_Style* style, Rectangle area, float line_height, int seed)
+{
+    const float bar_height = line_height * 0.55f;
+    int rows = (int) (area.height / line_height);
+
+    for (int row = 0; row < rows; row++) {
+        float noise = sinf((row + seed * 31) * 12.9898f) * 43758.5453f;
+        float width = area.width * (0.35f + 0.6f * (noise - floorf(noise)));
+
+        Rectangle bar = {
+            area.x,
+            area.y + row * line_height + (line_height - bar_height) / 2,
+            width,
+            bar_height,
+        };
+
+        tbf_gui_skeleton(style, bar, bar_height / 2);
     }
 }
 

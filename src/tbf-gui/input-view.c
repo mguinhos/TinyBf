@@ -7,20 +7,20 @@ void tbf_gui_input_view_draw(const TbfGui_Style* style, const TbfGui_Input* inpu
 
     tbf_gui_text_field(style, rect, "Entrada", waiting);
 
-    float x = rect.x + TBF_GUI_CARD_PADDING;
-    float y = rect.y + (rect.height - TBF_GUI_LINE_HEIGHT) / 2;
+    Rectangle content = tbf_gui_box(rect, tbf_gui_insets_xy(TBF_GUI_CARD_PADDING, 0));
+    float x = content.x;
+    float y = content.y + (content.height - TBF_GUI_LINE_HEIGHT) / 2;
 
     if (tbf_gui_input_is_empty(input)) {
         const char* hint = waiting
             ? "Digite algo: o programa está esperando um ','"
             : "Digite para enfileirar entrada (Enter = \\n, Backspace apaga)";
-        TbfMath_Vector2 size = tbf_gui_text_size(style->fonts.body, hint);
 
-        tbf_gui_text(style->fonts.body, hint, x, rect.y + (rect.height - size.y) / 2, waiting ? theme->primary : theme->on_surface_variant);
+        tbf_gui_label(style->fonts.body, hint, content, TBF_GUI_ALIGN_START, waiting ? theme->primary : theme->on_surface_variant);
         return;
     }
 
-    float max_x = rect.x + rect.width - TBF_GUI_CARD_PADDING - 2 * char_width;
+    float max_x = content.x + content.width - 2 * char_width;
 
     for (int i = 0; i < input->length && x < max_x; i++) {
         TbfByte c = tbf_gui_input_peek(input, i);
