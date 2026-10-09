@@ -19,6 +19,8 @@ typedef tinybf_dword tinybf_daddr;
 #define TINYBF_TAPE_MAXINDEX TINYBF_TAPE_SIZE -1
 #define TINYBF_STACK_MAXINDEX TINYBF_STACK_SIZE -1
 
+typedef void (*tinybf_output_fn)(void* userdata, tinybf_cell value);
+typedef tinybf_cell (*tinybf_input_fn)(void* userdata);
 
 typedef struct TinyBf {
     bool running;
@@ -34,6 +36,10 @@ typedef struct TinyBf {
 
     size_t program_size;
     tinybf_byte* program;
+
+    tinybf_output_fn output;
+    tinybf_input_fn input;
+    void* userdata;
 }
 TinyBf;
 

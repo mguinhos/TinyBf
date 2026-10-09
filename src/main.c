@@ -44,6 +44,10 @@ int main_onearg(char* filename)
     while (bf->running)  {
         tinybf_step(bf);
     }
+
+    putchar('\n');
+
+    return 0;
 }
 
 int main(int argc, char* argv[])

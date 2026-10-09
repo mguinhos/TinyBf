@@ -10,6 +10,21 @@ void panic(char* message)
     exit(1);
 }
 
+void tinybf_stdio_output(void* userdata, tinybf_cell value)
+{
+    (void) userdata;
+
+    putc(value, stdout);
+    fflush(stdout);
+}
+
+tinybf_cell tinybf_stdio_input(void* userdata)
+{
+    (void) userdata;
+
+    return getc(stdin);
+}
+
 TinyBf* tinybf_create(tinybf_byte* program, size_t program_size)
 {
     TinyBf* tinybf = malloc(sizeof(TinyBf));
@@ -26,13 +41,17 @@ TinyBf* tinybf_create(tinybf_byte* program, size_t program_size)
     tinybf->sp = 0;
     tinybf->ip = 0;
 
-    for (tinybf_addr i=0; i < TINYBF_TAPE_MAXINDEX; i++) {
+    for (size_t i=0; i < TINYBF_TAPE_SIZE; i++) {
         tinybf->tape[i] = 0;
     }
 
     tinybf->program = program;
     tinybf->program_size = program_size;
-    
+
+    tinybf->output = tinybf_stdio_output;
+    tinybf->input = tinybf_stdio_input;
+    tinybf->userdata = NULL;
+
     return tinybf;
 }
 
@@ -43,8 +62,6 @@ TinyBf* tinybf_step(TinyBf* tinybf)
     }
 
     if (!tinybf->running) {
-        putchar('\n');
-            
         return tinybf;
     }
 
@@ -114,13 +131,11 @@ TinyBf* tinybf_step(TinyBf* tinybf)
                 break;
 
             case '.':
-                putc(tinybf->tape[tinybf->tp], stdout);
-                fflush(stdout);
+                tinybf->output(tinybf->userdata, tinybf->tape[tinybf->tp]);
                 break;
 
             case ',':
-                tinybf->tape[tinybf->tp] = getc(stdin);
-                fflush(stdin);
+                tinybf->tape[tinybf->tp] = tinybf->input(tinybf->userdata);
                 break;
 
             default:
