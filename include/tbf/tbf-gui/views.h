@@ -21,11 +21,21 @@ typedef enum TbfGui_Action {
     TBF_GUI_ACTION_SLOWER,
     TBF_GUI_ACTION_FASTER,
     TBF_GUI_ACTION_TOGGLE_THEME,
+    TBF_GUI_ACTION_TOGGLE_OUTPUT_FULLSCREEN,
 } TbfGui_Action;
 
 typedef struct TbfGui_Toolbar {
     int speed;
 } TbfGui_Toolbar;
+
+typedef struct TbfGui_OutputView {
+    bool fullscreen;
+    bool selecting;
+    bool has_selection;
+    int anchor;
+    int head;
+    double copied_at;
+} TbfGui_OutputView;
 
 typedef struct TbfGui_CodeView {
     size_t* index;
@@ -48,7 +58,9 @@ void tbf_gui_code_view_free(TbfGui_CodeView* self);
 void tbf_gui_code_view_follow(TbfGui_CodeView* self);
 void tbf_gui_code_view_draw(TbfGui_CodeView* self, const TbfGui_Style* style, TbfGui_Debugger* debugger, Rectangle rect);
 
-void tbf_gui_output_view_draw(const TbfGui_Style* style, const TbfGui_Terminal* terminal, bool waiting, Rectangle rect);
+void tbf_gui_output_view_init(TbfGui_OutputView* self);
+void tbf_gui_output_view_toggle_fullscreen(TbfGui_OutputView* self);
+TbfGui_Action tbf_gui_output_view_draw(TbfGui_OutputView* self, const TbfGui_Style* style, const TbfGui_Terminal* terminal, bool waiting, Rectangle rect);
 void tbf_gui_tape_view_draw(const TbfGui_Style* style, const TbfVm* vm, Rectangle rect);
 void tbf_gui_input_view_draw(const TbfGui_Style* style, const TbfGui_Input* input, bool waiting, Rectangle rect);
 

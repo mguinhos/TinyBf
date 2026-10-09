@@ -13,6 +13,7 @@
 #define TBF_GUI_FONT_FALLBACK   "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 
 #define TBF_GUI_LINE_HEIGHT     19
+#define TBF_GUI_LINE_HEIGHT_LARGE 29
 #define TBF_GUI_CARD_PADDING    16
 #define TBF_GUI_CARD_HEADER     44
 #define TBF_GUI_CARD_RADIUS     12
@@ -26,6 +27,9 @@
 #define TBF_GUI_ICON_REMOVE     0xe15b
 #define TBF_GUI_ICON_LIGHT      0xe518
 #define TBF_GUI_ICON_DARK       0xe51c
+#define TBF_GUI_ICON_FULLSCREEN 0xe5d0
+#define TBF_GUI_ICON_FULLSCREEN_EXIT 0xe5d1
+#define TBF_GUI_ICON_COPY       0xe14d
 #define TBF_GUI_ICON_NONE       0
 
 typedef enum TbfGui_ButtonKind {
@@ -41,9 +45,11 @@ typedef struct TbfGui_Fonts {
     Font small;
     Font mono;
     Font mono_small;
+    Font mono_large;
     Font icons;
     Font icons_small;
     float char_width;
+    float char_width_large;
 } TbfGui_Fonts;
 
 typedef struct TbfGui_Style {
@@ -54,6 +60,10 @@ typedef struct TbfGui_Style {
 
 void tbf_gui_fonts_load(TbfGui_Fonts* self);
 void tbf_gui_fonts_unload(TbfGui_Fonts* self);
+
+void tbf_gui_cursor_begin(void);
+void tbf_gui_cursor_request(int cursor);
+void tbf_gui_cursor_apply(void);
 
 TbfMath_Vector2 tbf_gui_mouse_position(void);
 bool tbf_gui_mouse_over(Rectangle rect);

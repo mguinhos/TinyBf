@@ -14,6 +14,7 @@ void tbf_gui_app_init(TbfGui_App* self)
     tbf_gui_input_clear(&self->input);
     tbf_gui_toolbar_init(&self->toolbar);
     tbf_gui_code_view_init(&self->code_view);
+    tbf_gui_output_view_init(&self->output_view);
 
     tbf_gui_debugger_init(&self->debugger, &self->terminal, &self->input);
     tbf_gui_debugger_set_rate(&self->debugger, tbf_gui_toolbar_rate(&self->toolbar));
@@ -65,6 +66,10 @@ void tbf_gui_app_dispatch(TbfGui_App* self, TbfGui_Action action)
     case TBF_GUI_ACTION_FASTER:
         tbf_gui_toolbar_faster(&self->toolbar);
         tbf_gui_debugger_set_rate(&self->debugger, tbf_gui_toolbar_rate(&self->toolbar));
+        break;
+
+    case TBF_GUI_ACTION_TOGGLE_OUTPUT_FULLSCREEN:
+        tbf_gui_output_view_toggle_fullscreen(&self->output_view);
         break;
 
     case TBF_GUI_ACTION_TOGGLE_THEME:
@@ -146,7 +151,20 @@ void tbf_gui_app_update(TbfGui_App* self)
     tbf_gui_ripples_update(&self->ripples);
 }
 
-void tbf_gui_app_draw(TbfGui_App* self)
+static TbfGui_Action tbf_gui_app_draw_fullscreen(TbfGui_App* self, bool waiting)
+{
+    const float margin = TBF_GUI_CARD_PADDING;
+
+    return tbf_gui_output_view_draw(
+        &self->output_view,
+        &self->style,
+        &self->terminal,
+        waiting,
+        (Rectangle) { margin, margin, TBF_GUI_WINDOW_WIDTH - 2 * margin, TBF_GUI_WINDOW_HEIGHT - 2 * margin }
+    );
+}
+
+static void tbf_gui_app_draw_workspace(TbfGui_App* self, bool waiting, TbfGui_Action actions[3])
 {
     const float margin = TBF_GUI_CARD_PADDING;
     const float gap = 12;
@@ -159,21 +177,35 @@ void tbf_gui_app_draw(TbfGui_App* self)
     const float input_y = tape_y + tape_height + gap;
 
     const TbfGui_Style* style = &self->style;
+
+    actions[0] = tbf_gui_app_bar_draw(style, &self->debugger, self->dark, (Rectangle) { 0, 0, TBF_GUI_WINDOW_WIDTH, 64 });
+    actions[1] = tbf_gui_toolbar_draw(&self->toolbar, style, &self->debugger, (Rectangle) { margin, 72, TBF_GUI_WINDOW_WIDTH - 2 * margin, 40 });
+
+    tbf_gui_code_view_draw(&self->code_view, style, &self->debugger, (Rectangle) { margin, top, right_x - margin - gap, TBF_GUI_WINDOW_HEIGHT - top - margin });
+    actions[2] = tbf_gui_output_view_draw(&self->output_view, style, &self->terminal, waiting, (Rectangle) { right_x, top, right_width, output_height });
+    tbf_gui_tape_view_draw(style, self->debugger.vm, (Rectangle) { right_x, tape_y, right_width, tape_height });
+    tbf_gui_input_view_draw(style, &self->input, waiting, (Rectangle) { right_x, input_y, right_width, 56 });
+}
+
+void tbf_gui_app_draw(TbfGui_App* self)
+{
+    TbfGui_Action actions[3] = { TBF_GUI_ACTION_NONE, TBF_GUI_ACTION_NONE, TBF_GUI_ACTION_NONE };
     bool waiting = self->debugger.state == TBF_GUI_DEBUGGER_WAITING_INPUT;
 
     BeginDrawing();
-    ClearBackground(style->theme->surface);
+    ClearBackground(self->style.theme->surface);
+    tbf_gui_cursor_begin();
 
-    TbfGui_Action bar_action = tbf_gui_app_bar_draw(style, &self->debugger, self->dark, (Rectangle) { 0, 0, TBF_GUI_WINDOW_WIDTH, 64 });
-    TbfGui_Action tool_action = tbf_gui_toolbar_draw(&self->toolbar, style, &self->debugger, (Rectangle) { margin, 72, TBF_GUI_WINDOW_WIDTH - 2 * margin, 40 });
-
-    tbf_gui_code_view_draw(&self->code_view, style, &self->debugger, (Rectangle) { margin, top, right_x - margin - gap, TBF_GUI_WINDOW_HEIGHT - top - margin });
-    tbf_gui_output_view_draw(style, &self->terminal, waiting, (Rectangle) { right_x, top, right_width, output_height });
-    tbf_gui_tape_view_draw(style, self->debugger.vm, (Rectangle) { right_x, tape_y, right_width, tape_height });
-    tbf_gui_input_view_draw(style, &self->input, waiting, (Rectangle) { right_x, input_y, right_width, 56 });
+    if (self->output_view.fullscreen) {
+        actions[0] = tbf_gui_app_draw_fullscreen(self, waiting);
+    } else {
+        tbf_gui_app_draw_workspace(self, waiting, actions);
+    }
 
     EndDrawing();
+    tbf_gui_cursor_apply();
 
-    tbf_gui_app_dispatch(self, bar_action);
-    tbf_gui_app_dispatch(self, tool_action);
+    for (int i = 0; i < 3; i++) {
+        tbf_gui_app_dispatch(self, actions[i]);
+    }
 }

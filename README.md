@@ -24,7 +24,7 @@ Para compilar e executar o interpretador, siga os passos abaixo:
 
 A interface gráfica também pode ser aberta com `./bin/tbf --gui [ARQUIVO]` e aceita arquivos arrastados para a janela.
 
-A interface segue o Material Design 3, usa as fontes Roboto e Roboto Mono com ícones Material Icons e tem um switch no canto superior direito para alternar entre os modos claro e escuro.
+A interface segue o Material Design 3, usa as fontes Roboto e Roboto Mono com ícones Material Icons e tem um switch no canto superior direito para alternar entre os modos claro e escuro. No painel de saída dá para selecionar texto com o mouse e copiar (Ctrl+C, Ctrl+A ou o botão de copiar) e abrir a saída em tela cheia (Esc para sair).
 
 ![Interface gráfica no modo escuro](docs/gui-escuro.png)
 

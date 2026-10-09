@@ -19,6 +19,7 @@ typedef struct TbfGui_App {
     TbfGui_Debugger debugger;
     TbfGui_Toolbar toolbar;
     TbfGui_CodeView code_view;
+    TbfGui_OutputView output_view;
 } TbfGui_App;
 
 void tbf_gui_app_init(TbfGui_App* self);

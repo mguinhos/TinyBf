@@ -20,6 +20,9 @@ static const int tbf_gui_icon_codepoints[] = {
     TBF_GUI_ICON_REMOVE,
     TBF_GUI_ICON_LIGHT,
     TBF_GUI_ICON_DARK,
+    TBF_GUI_ICON_FULLSCREEN,
+    TBF_GUI_ICON_FULLSCREEN_EXIT,
+    TBF_GUI_ICON_COPY,
 };
 
 #define TBF_GUI_ICON_COUNT ((int) (sizeof(tbf_gui_icon_codepoints) / sizeof(tbf_gui_icon_codepoints[0])))
@@ -79,9 +82,11 @@ void tbf_gui_fonts_load(TbfGui_Fonts* self)
     self->small = tbf_gui_font_load("Roboto-Regular.ttf", 12, NULL, 0);
     self->mono = tbf_gui_font_load("RobotoMono-Regular.ttf", 16, NULL, 0);
     self->mono_small = tbf_gui_font_load("RobotoMono-Regular.ttf", 11, NULL, 0);
+    self->mono_large = tbf_gui_font_load("RobotoMono-Regular.ttf", 24, NULL, 0);
     self->icons = tbf_gui_font_load("MaterialIcons-Regular.ttf", 24, tbf_gui_icon_codepoints, TBF_GUI_ICON_COUNT);
     self->icons_small = tbf_gui_font_load("MaterialIcons-Regular.ttf", 18, tbf_gui_icon_codepoints, TBF_GUI_ICON_COUNT);
     self->char_width = tbf_gui_text_size(self->mono, "M").x;
+    self->char_width_large = tbf_gui_text_size(self->mono_large, "M").x;
 }
 
 void tbf_gui_fonts_unload(TbfGui_Fonts* self)
@@ -92,8 +97,31 @@ void tbf_gui_fonts_unload(TbfGui_Fonts* self)
     tbf_gui_font_unload(self->small);
     tbf_gui_font_unload(self->mono);
     tbf_gui_font_unload(self->mono_small);
+    tbf_gui_font_unload(self->mono_large);
     tbf_gui_font_unload(self->icons);
     tbf_gui_font_unload(self->icons_small);
+}
+
+/* A raylib cria um cursor novo a cada SetMouseCursor, então só aplicamos quando muda. */
+static int tbf_gui_cursor_requested = MOUSE_CURSOR_DEFAULT;
+static int tbf_gui_cursor_applied = MOUSE_CURSOR_DEFAULT;
+
+void tbf_gui_cursor_begin(void)
+{
+    tbf_gui_cursor_requested = MOUSE_CURSOR_DEFAULT;
+}
+
+void tbf_gui_cursor_request(int cursor)
+{
+    tbf_gui_cursor_requested = cursor;
+}
+
+void tbf_gui_cursor_apply(void)
+{
+    if (tbf_gui_cursor_requested != tbf_gui_cursor_applied) {
+        SetMouseCursor(tbf_gui_cursor_requested);
+        tbf_gui_cursor_applied = tbf_gui_cursor_requested;
+    }
 }
 
 TbfMath_Vector2 tbf_gui_mouse_position(void)
