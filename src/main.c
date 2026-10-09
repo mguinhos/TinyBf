@@ -1,61 +1,65 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tinybf.c"
+#include "tbf/tbf.h"
+#include "tbf/tbf-gui/tbf-gui.h"
 
-void show_usage(void)
+static void tbf_cli_show_usage(void)
 {
-    fprintf(stderr, "usage:\n\ttinyf <FILENAME>\n");
+    fprintf(stderr, "usage:\n\ttbf <FILENAME>\n\ttbf --gui [FILENAME]\n");
 }
 
-int main_noargs(void)
+static int tbf_cli_run(const char* path)
 {
-    fprintf(stderr, "error: missing FILE argument\n");
-    show_usage();
+    TbfProgram program;
+    TbfProgramStatus program_status = tbf_program_load(&program, path);
 
-    return 1;
-}
-
-int main_onearg(char* filename)
-{
-
-    FILE* fp = fopen(filename, "rb");
-
-    if (fp == NULL) {
-        fprintf(stderr, "error: unable to open file '%s', perhaps the file does not exist or is not ready.\n", filename);
-
+    if (program_status == TBF_PROGRAM_UNREADABLE) {
+        fprintf(stderr, "error: unable to open file '%s', perhaps the file does not exist or is not ready.\n", path);
+        tbf_program_free(&program);
         return 1;
     }
 
-    size_t filesize;
-
-    fseek(fp, 0L, SEEK_END);
-    filesize = ftell(fp);
-    rewind(fp);
-
-    tinybf_byte* filedata = malloc(sizeof(tinybf_byte) * filesize);
-
-    fread(filedata, sizeof(tinybf_byte), filesize, fp);
-
-    fclose(fp);
-
-    TinyBf* bf = tinybf_create(filedata, filesize);
-
-    while (bf->running)  {
-        tinybf_step(bf);
+    if (program_status != TBF_PROGRAM_OK) {
+        fprintf(stderr, "error: %s (posição %zu)\n", tbf_program_status_message(program_status), program.error_position);
+        tbf_program_free(&program);
+        return 1;
     }
 
+    TbfVm* vm = tbf_vm_create(&program, tbf_io_stdio());
+
+    if (vm == NULL) {
+        fprintf(stderr, "error: out of memory\n");
+        tbf_program_free(&program);
+        return 1;
+    }
+
+    TbfStatus status = tbf_vm_run(vm);
+
     putchar('\n');
+
+    tbf_vm_destroy(vm);
+    tbf_program_free(&program);
+
+    if (status != TBF_STATUS_HALTED) {
+        fprintf(stderr, "error: %s\n", tbf_status_message(status));
+        return 1;
+    }
 
     return 0;
 }
 
 int main(int argc, char* argv[])
 {
-    if (argc == 0)
-        return main_noargs();
-    else if (argc == 1)
-        return main_noargs();
-    
-    return main_onearg(argv[1]);        
+    if (argc > 1 && strcmp(argv[1], "--gui") == 0) {
+        return tbf_gui_run(argc > 2 ? argv[2] : NULL);
+    }
+
+    if (argc < 2) {
+        fprintf(stderr, "error: missing FILE argument\n");
+        tbf_cli_show_usage();
+        return 1;
+    }
+
+    return tbf_cli_run(argv[1]);
 }

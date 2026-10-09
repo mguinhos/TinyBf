@@ -1,27 +1,30 @@
 CC= gcc
+CC_FLAGS= -Wall -Wextra
 CC_INCLUDES= -Iinclude
 
 RAYLIB_VERSION= 5.5
 RAYLIB_DIR= thirdparty/raylib
 RAYLIB_LIB= $(RAYLIB_DIR)/src/libraylib.a
-GUI_SOURCES= src/tinybf.c $(wildcard src/gui/*.c)
-
 RAYLIB_FLAGS= -I$(RAYLIB_DIR)/src $(RAYLIB_LIB) -lGL -lm -lpthread -ldl -lrt -lX11
+
+SOURCES= src/main.c $(wildcard src/tbf-vm/*.c) $(wildcard src/tbf-gui/*.c)
 
 all: build run
 
-build:
-	$(CC) src/main.c -o bin/main $(CC_INCLUDES)
+build: $(RAYLIB_LIB)
+	$(CC) $(CC_FLAGS) $(SOURCES) -o bin/tbf $(CC_INCLUDES) $(RAYLIB_FLAGS)
 
 run:
-	./bin/main $(ARGS)
-
-gui: $(RAYLIB_LIB)
-	$(CC) $(GUI_SOURCES) -o bin/gui $(CC_INCLUDES) $(RAYLIB_FLAGS)
+	./bin/tbf $(ARGS)
 
 run-gui:
-	./bin/gui $(ARGS)
+	./bin/tbf --gui $(ARGS)
+
+clean:
+	rm -f bin/tbf
 
 $(RAYLIB_LIB):
 	test -d $(RAYLIB_DIR) || git clone --depth 1 --branch $(RAYLIB_VERSION) https://github.com/raysan5/raylib.git $(RAYLIB_DIR)
 	$(MAKE) -C $(RAYLIB_DIR)/src PLATFORM=PLATFORM_DESKTOP
+
+.PHONY: all build run run-gui clean
