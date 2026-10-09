@@ -5,23 +5,23 @@
 #define TBF_GUI_TERMINAL_ROWS   25
 #define TBF_GUI_TERMINAL_PARAMS 8
 
-typedef enum TbfGuiEscState {
+typedef enum TbfGui_EscState {
     TBF_GUI_ESC_NONE,
     TBF_GUI_ESC_START,
     TBF_GUI_ESC_CSI,
-} TbfGuiEscState;
+} TbfGui_EscState;
 
-typedef struct TbfGuiTerminal {
+typedef struct TbfGui_Terminal {
     unsigned char cells[TBF_GUI_TERMINAL_ROWS][TBF_GUI_TERMINAL_COLS];
     int cx;
     int cy;
 
-    TbfGuiEscState esc;
+    TbfGui_EscState esc;
     int params[TBF_GUI_TERMINAL_PARAMS];
     int param_count;
-} TbfGuiTerminal;
+} TbfGui_Terminal;
 
-void tbf_gui_terminal_clear(TbfGuiTerminal* self);
-void tbf_gui_terminal_put(TbfGuiTerminal* self, unsigned char c);
+void tbf_gui_terminal_clear(TbfGui_Terminal* self);
+void tbf_gui_terminal_put(TbfGui_Terminal* self, unsigned char c);
 
 #endif

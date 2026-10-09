@@ -10,49 +10,53 @@
 #define TBF_GUI_DEBUGGER_PATH_SIZE  1024
 #define TBF_GUI_DEBUGGER_ERROR_SIZE 256
 
-typedef enum TbfGuiDebuggerState {
+typedef enum TbfGui_DebuggerState {
     TBF_GUI_DEBUGGER_EMPTY,
     TBF_GUI_DEBUGGER_PAUSED,
     TBF_GUI_DEBUGGER_RUNNING,
     TBF_GUI_DEBUGGER_WAITING_INPUT,
     TBF_GUI_DEBUGGER_HALTED,
     TBF_GUI_DEBUGGER_FAILED,
-} TbfGuiDebuggerState;
+} TbfGui_DebuggerState;
 
-typedef struct TbfGuiDebugger {
+typedef struct TbfGui_Debugger {
     char path[TBF_GUI_DEBUGGER_PATH_SIZE];
     char error[TBF_GUI_DEBUGGER_ERROR_SIZE];
 
     TbfProgram program;
     bool loaded;
     bool* breakpoints;
+    size_t* match;
 
     TbfVm* vm;
-    TbfGuiDebuggerState state;
+    TbfGui_DebuggerState state;
     bool resume_running;
     bool ignore_breakpoint;
+    bool skipping;
+    TbfDaddr skip_end;
     unsigned long long steps;
 
     int rate;
     double step_accum;
 
-    TbfGuiTerminal* terminal;
-    TbfGuiInput* input;
-} TbfGuiDebugger;
+    TbfGui_Terminal* terminal;
+    TbfGui_Input* input;
+} TbfGui_Debugger;
 
-void tbf_gui_debugger_init(TbfGuiDebugger* self, TbfGuiTerminal* terminal, TbfGuiInput* input);
-void tbf_gui_debugger_free(TbfGuiDebugger* self);
+void tbf_gui_debugger_init(TbfGui_Debugger* self, TbfGui_Terminal* terminal, TbfGui_Input* input);
+void tbf_gui_debugger_free(TbfGui_Debugger* self);
 
-bool tbf_gui_debugger_load(TbfGuiDebugger* self, const char* path);
-void tbf_gui_debugger_reset(TbfGuiDebugger* self);
+bool tbf_gui_debugger_load(TbfGui_Debugger* self, const char* path);
+void tbf_gui_debugger_reset(TbfGui_Debugger* self);
 
-void tbf_gui_debugger_update(TbfGuiDebugger* self, float frame_time);
-void tbf_gui_debugger_toggle_run(TbfGuiDebugger* self);
-void tbf_gui_debugger_step(TbfGuiDebugger* self);
-void tbf_gui_debugger_set_rate(TbfGuiDebugger* self, int steps_per_second);
-void tbf_gui_debugger_toggle_breakpoint(TbfGuiDebugger* self, size_t index);
+void tbf_gui_debugger_update(TbfGui_Debugger* self, float frame_time);
+void tbf_gui_debugger_toggle_run(TbfGui_Debugger* self);
+void tbf_gui_debugger_step(TbfGui_Debugger* self);
+void tbf_gui_debugger_skip(TbfGui_Debugger* self);
+void tbf_gui_debugger_set_rate(TbfGui_Debugger* self, int steps_per_second);
+void tbf_gui_debugger_toggle_breakpoint(TbfGui_Debugger* self, size_t index);
 
-bool tbf_gui_debugger_is_running(const TbfGuiDebugger* self);
-bool tbf_gui_debugger_can_run(const TbfGuiDebugger* self);
+bool tbf_gui_debugger_is_running(const TbfGui_Debugger* self);
+bool tbf_gui_debugger_can_run(const TbfGui_Debugger* self);
 
 #endif

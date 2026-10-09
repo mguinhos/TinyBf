@@ -8,23 +8,25 @@
 #include "tbf/tbf-gui/widgets.h"
 
 #define TBF_GUI_WINDOW_WIDTH    1280
-#define TBF_GUI_WINDOW_HEIGHT   810
+#define TBF_GUI_WINDOW_HEIGHT   912
 
-typedef struct TbfGuiApp {
-    TbfGuiFonts fonts;
-    TbfGuiTerminal terminal;
-    TbfGuiInput input;
-    TbfGuiDebugger debugger;
-    TbfGuiToolbar toolbar;
-    TbfGuiCodeView code_view;
-} TbfGuiApp;
+typedef struct TbfGui_App {
+    TbfGui_Style style;
+    TbfGui_Ripples ripples;
+    bool dark;
+    TbfGui_Terminal terminal;
+    TbfGui_Input input;
+    TbfGui_Debugger debugger;
+    TbfGui_Toolbar toolbar;
+    TbfGui_CodeView code_view;
+} TbfGui_App;
 
-void tbf_gui_app_init(TbfGuiApp* self);
-void tbf_gui_app_free(TbfGuiApp* self);
-void tbf_gui_app_load(TbfGuiApp* self, const char* path);
-void tbf_gui_app_dispatch(TbfGuiApp* self, TbfGuiAction action);
-void tbf_gui_app_poll(TbfGuiApp* self);
-void tbf_gui_app_update(TbfGuiApp* self);
-void tbf_gui_app_draw(TbfGuiApp* self);
+void tbf_gui_app_init(TbfGui_App* self);
+void tbf_gui_app_free(TbfGui_App* self);
+void tbf_gui_app_load(TbfGui_App* self, const char* path);
+void tbf_gui_app_dispatch(TbfGui_App* self, TbfGui_Action action);
+void tbf_gui_app_poll(TbfGui_App* self);
+void tbf_gui_app_update(TbfGui_App* self);
+void tbf_gui_app_draw(TbfGui_App* self);
 
 #endif

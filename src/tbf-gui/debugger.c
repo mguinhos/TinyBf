@@ -11,31 +11,64 @@
 
 static void tbf_gui_debugger_output(void* context, TbfCell value)
 {
-    TbfGuiDebugger* self = context;
+    TbfGui_Debugger* self = context;
 
     tbf_gui_terminal_put(self->terminal, value);
 }
 
 static TbfCell tbf_gui_debugger_input(void* context)
 {
-    TbfGuiDebugger* self = context;
+    TbfGui_Debugger* self = context;
 
     return tbf_gui_input_pop(self->input);
 }
 
-static void tbf_gui_debugger_unload(TbfGuiDebugger* self)
+static void tbf_gui_debugger_unload(TbfGui_Debugger* self)
 {
     tbf_vm_destroy(self->vm);
     tbf_program_free(&self->program);
     free(self->breakpoints);
+    free(self->match);
 
     self->vm = NULL;
     self->breakpoints = NULL;
+    self->match = NULL;
     self->loaded = false;
     self->error[0] = '\0';
 }
 
-void tbf_gui_debugger_init(TbfGuiDebugger* self, TbfGuiTerminal* terminal, TbfGuiInput* input)
+static bool tbf_gui_debugger_pair(TbfGui_Debugger* self)
+{
+    const TbfProgram* program = &self->program;
+    size_t* stack = malloc(sizeof(size_t) * (program->size + 1));
+    size_t depth = 0;
+
+    self->match = malloc(sizeof(size_t) * (program->size + 1));
+
+    if (stack == NULL || self->match == NULL) {
+        free(stack);
+        return false;
+    }
+
+    for (size_t i = 0; i < program->size; i++) {
+        self->match[i] = i;
+
+        if (program->code[i] == '[') {
+            stack[depth++] = i;
+        } else if (program->code[i] == ']' && depth > 0) {
+            size_t open = stack[--depth];
+
+            self->match[open] = i;
+            self->match[i] = open;
+        }
+    }
+
+    free(stack);
+
+    return true;
+}
+
+void tbf_gui_debugger_init(TbfGui_Debugger* self, TbfGui_Terminal* terminal, TbfGui_Input* input)
 {
     memset(self, 0, sizeof(*self));
 
@@ -43,12 +76,12 @@ void tbf_gui_debugger_init(TbfGuiDebugger* self, TbfGuiTerminal* terminal, TbfGu
     self->input = input;
 }
 
-void tbf_gui_debugger_free(TbfGuiDebugger* self)
+void tbf_gui_debugger_free(TbfGui_Debugger* self)
 {
     tbf_gui_debugger_unload(self);
 }
 
-bool tbf_gui_debugger_load(TbfGuiDebugger* self, const char* path)
+bool tbf_gui_debugger_load(TbfGui_Debugger* self, const char* path)
 {
     tbf_gui_debugger_unload(self);
     snprintf(self->path, sizeof(self->path), "%s", path);
@@ -62,7 +95,7 @@ bool tbf_gui_debugger_load(TbfGuiDebugger* self, const char* path)
         snprintf(self->error, sizeof(self->error), "%s (posição %zu)", message, self->program.error_position);
     } else {
         self->breakpoints = calloc(self->program.size + 1, sizeof(bool));
-        self->loaded = self->breakpoints != NULL;
+        self->loaded = self->breakpoints != NULL && tbf_gui_debugger_pair(self);
     }
 
     tbf_gui_debugger_reset(self);
@@ -70,7 +103,7 @@ bool tbf_gui_debugger_load(TbfGuiDebugger* self, const char* path)
     return self->loaded;
 }
 
-void tbf_gui_debugger_reset(TbfGuiDebugger* self)
+void tbf_gui_debugger_reset(TbfGui_Debugger* self)
 {
     tbf_vm_destroy(self->vm);
     self->vm = NULL;
@@ -82,6 +115,7 @@ void tbf_gui_debugger_reset(TbfGuiDebugger* self)
     self->step_accum = 0;
     self->resume_running = false;
     self->ignore_breakpoint = false;
+    self->skipping = false;
     self->state = TBF_GUI_DEBUGGER_EMPTY;
 
     if (!self->loaded) {
@@ -102,7 +136,7 @@ void tbf_gui_debugger_reset(TbfGuiDebugger* self)
     }
 }
 
-static bool tbf_gui_debugger_advance(TbfGuiDebugger* self, bool ignore_breakpoint)
+static bool tbf_gui_debugger_advance(TbfGui_Debugger* self, bool ignore_breakpoint)
 {
     TbfVm* vm = self->vm;
 
@@ -135,7 +169,7 @@ static bool tbf_gui_debugger_advance(TbfGuiDebugger* self, bool ignore_breakpoin
     return true;
 }
 
-static long long tbf_gui_debugger_budget(TbfGuiDebugger* self, float frame_time)
+static long long tbf_gui_debugger_budget(TbfGui_Debugger* self, float frame_time)
 {
     if (self->rate <= 0) {
         return LLONG_MAX;
@@ -154,9 +188,9 @@ static long long tbf_gui_debugger_budget(TbfGuiDebugger* self, float frame_time)
     return count;
 }
 
-static void tbf_gui_debugger_run_frame(TbfGuiDebugger* self, float frame_time)
+static void tbf_gui_debugger_run_frame(TbfGui_Debugger* self, float frame_time)
 {
-    long long count = tbf_gui_debugger_budget(self, frame_time);
+    long long count = self->skipping ? LLONG_MAX : tbf_gui_debugger_budget(self, frame_time);
     double deadline = GetTime() + TBF_GUI_DEBUGGER_FRAME_BUDGET;
 
     for (long long i = 0; i < count; i++) {
@@ -168,13 +202,18 @@ static void tbf_gui_debugger_run_frame(TbfGuiDebugger* self, float frame_time)
             break;
         }
 
+        if (self->skipping && self->vm->ip > self->skip_end) {
+            self->state = TBF_GUI_DEBUGGER_PAUSED;
+            break;
+        }
+
         if ((i & 0xfff) == 0xfff && GetTime() > deadline) {
             break;
         }
     }
 }
 
-void tbf_gui_debugger_update(TbfGuiDebugger* self, float frame_time)
+void tbf_gui_debugger_update(TbfGui_Debugger* self, float frame_time)
 {
     if (self->state == TBF_GUI_DEBUGGER_WAITING_INPUT && !tbf_gui_input_is_empty(self->input)) {
         if (self->resume_running) {
@@ -188,9 +227,13 @@ void tbf_gui_debugger_update(TbfGuiDebugger* self, float frame_time)
     if (self->state == TBF_GUI_DEBUGGER_RUNNING) {
         tbf_gui_debugger_run_frame(self, frame_time);
     }
+
+    if (self->state != TBF_GUI_DEBUGGER_RUNNING && self->state != TBF_GUI_DEBUGGER_WAITING_INPUT) {
+        self->skipping = false;
+    }
 }
 
-void tbf_gui_debugger_toggle_run(TbfGuiDebugger* self)
+void tbf_gui_debugger_toggle_run(TbfGui_Debugger* self)
 {
     switch (self->state) {
     case TBF_GUI_DEBUGGER_PAUSED:
@@ -212,33 +255,66 @@ void tbf_gui_debugger_toggle_run(TbfGuiDebugger* self)
     }
 }
 
-void tbf_gui_debugger_step(TbfGuiDebugger* self)
+void tbf_gui_debugger_step(TbfGui_Debugger* self)
 {
     if (self->state == TBF_GUI_DEBUGGER_PAUSED) {
         tbf_gui_debugger_advance(self, true);
     }
 }
 
-void tbf_gui_debugger_set_rate(TbfGuiDebugger* self, int steps_per_second)
+static TbfDaddr tbf_gui_debugger_section_end(const TbfGui_Debugger* self)
+{
+    const TbfVm* vm = self->vm;
+    const TbfProgram* program = &self->program;
+    TbfDaddr ip = vm->ip;
+
+    if (vm->sp > 0) {
+        return self->match[vm->stack[vm->sp - 1]];
+    }
+
+    if (ip < program->size && program->code[ip] == '[') {
+        return self->match[ip];
+    }
+
+    while (ip < program->size && program->code[ip] != '[') {
+        ip++;
+    }
+
+    return ip > vm->ip ? ip - 1 : ip;
+}
+
+void tbf_gui_debugger_skip(TbfGui_Debugger* self)
+{
+    if (self->state != TBF_GUI_DEBUGGER_PAUSED) {
+        return;
+    }
+
+    self->skip_end = tbf_gui_debugger_section_end(self);
+    self->skipping = true;
+    self->ignore_breakpoint = true;
+    self->state = TBF_GUI_DEBUGGER_RUNNING;
+}
+
+void tbf_gui_debugger_set_rate(TbfGui_Debugger* self, int steps_per_second)
 {
     self->rate = steps_per_second;
     self->step_accum = 0;
 }
 
-void tbf_gui_debugger_toggle_breakpoint(TbfGuiDebugger* self, size_t index)
+void tbf_gui_debugger_toggle_breakpoint(TbfGui_Debugger* self, size_t index)
 {
     if (self->loaded && index < self->program.size) {
         self->breakpoints[index] = !self->breakpoints[index];
     }
 }
 
-bool tbf_gui_debugger_is_running(const TbfGuiDebugger* self)
+bool tbf_gui_debugger_is_running(const TbfGui_Debugger* self)
 {
     return self->state == TBF_GUI_DEBUGGER_RUNNING
         || (self->state == TBF_GUI_DEBUGGER_WAITING_INPUT && self->resume_running);
 }
 
-bool tbf_gui_debugger_can_run(const TbfGuiDebugger* self)
+bool tbf_gui_debugger_can_run(const TbfGui_Debugger* self)
 {
     return self->state == TBF_GUI_DEBUGGER_PAUSED
         || self->state == TBF_GUI_DEBUGGER_RUNNING

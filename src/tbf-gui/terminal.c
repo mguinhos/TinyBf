@@ -2,7 +2,7 @@
 
 #include "tbf/tbf-gui/terminal.h"
 
-static void tbf_gui_terminal_newline(TbfGuiTerminal* self)
+static void tbf_gui_terminal_newline(TbfGui_Terminal* self)
 {
     self->cx = 0;
 
@@ -15,7 +15,7 @@ static void tbf_gui_terminal_newline(TbfGuiTerminal* self)
     self->cy = TBF_GUI_TERMINAL_ROWS - 1;
 }
 
-static int tbf_gui_terminal_param(const TbfGuiTerminal* self, int index, int fallback)
+static int tbf_gui_terminal_param(const TbfGui_Terminal* self, int index, int fallback)
 {
     if (index > self->param_count || self->params[index] == 0) {
         return fallback;
@@ -24,7 +24,7 @@ static int tbf_gui_terminal_param(const TbfGuiTerminal* self, int index, int fal
     return self->params[index];
 }
 
-static void tbf_gui_terminal_clamp(TbfGuiTerminal* self)
+static void tbf_gui_terminal_clamp(TbfGui_Terminal* self)
 {
     if (self->cx < 0) {
         self->cx = 0;
@@ -43,7 +43,7 @@ static void tbf_gui_terminal_clamp(TbfGuiTerminal* self)
     }
 }
 
-static void tbf_gui_terminal_erase_display(TbfGuiTerminal* self)
+static void tbf_gui_terminal_erase_display(TbfGui_Terminal* self)
 {
     if (self->params[0] == 2 || self->params[0] == 3) {
         memset(self->cells, ' ', sizeof(self->cells));
@@ -61,7 +61,7 @@ static void tbf_gui_terminal_erase_display(TbfGuiTerminal* self)
     }
 }
 
-static void tbf_gui_terminal_erase_line(TbfGuiTerminal* self)
+static void tbf_gui_terminal_erase_line(TbfGui_Terminal* self)
 {
     if (self->params[0] == 2) {
         memset(self->cells[self->cy], ' ', TBF_GUI_TERMINAL_COLS);
@@ -70,7 +70,7 @@ static void tbf_gui_terminal_erase_line(TbfGuiTerminal* self)
     }
 }
 
-static void tbf_gui_terminal_csi(TbfGuiTerminal* self, unsigned char command)
+static void tbf_gui_terminal_csi(TbfGui_Terminal* self, unsigned char command)
 {
     switch (command) {
     case 'H':
@@ -110,7 +110,7 @@ static void tbf_gui_terminal_csi(TbfGuiTerminal* self, unsigned char command)
     tbf_gui_terminal_clamp(self);
 }
 
-static void tbf_gui_terminal_parse(TbfGuiTerminal* self, unsigned char c)
+static void tbf_gui_terminal_parse(TbfGui_Terminal* self, unsigned char c)
 {
     if (self->esc == TBF_GUI_ESC_START) {
         self->esc = TBF_GUI_ESC_NONE;
@@ -135,7 +135,7 @@ static void tbf_gui_terminal_parse(TbfGuiTerminal* self, unsigned char c)
     }
 }
 
-void tbf_gui_terminal_clear(TbfGuiTerminal* self)
+void tbf_gui_terminal_clear(TbfGui_Terminal* self)
 {
     memset(self->cells, ' ', sizeof(self->cells));
     self->cx = 0;
@@ -143,7 +143,7 @@ void tbf_gui_terminal_clear(TbfGuiTerminal* self)
     self->esc = TBF_GUI_ESC_NONE;
 }
 
-void tbf_gui_terminal_put(TbfGuiTerminal* self, unsigned char c)
+void tbf_gui_terminal_put(TbfGui_Terminal* self, unsigned char c)
 {
     if (self->esc != TBF_GUI_ESC_NONE) {
         tbf_gui_terminal_parse(self, c);

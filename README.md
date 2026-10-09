@@ -24,11 +24,14 @@ Para compilar e executar o interpretador, siga os passos abaixo:
 
 A interface gráfica também pode ser aberta com `./bin/tbf --gui [ARQUIVO]` e aceita arquivos arrastados para a janela.
 
+A interface segue o Material Design 3, usa as fontes Roboto e Roboto Mono com ícones Material Icons e tem um switch no canto superior direito para alternar entre os modos claro e escuro.
+
 ## Dependências
 
 * GCC (GNU Compiler Collection) versão 9 ou superior
 * Make versão 4 ou superior
 * Git e bibliotecas de desenvolvimento do X11 e OpenGL (a raylib 5.5 é baixada e compilada em `thirdparty/` automaticamente)
+* curl (as fontes Roboto, Roboto Mono e Material Icons são baixadas em `thirdparty/fonts/` automaticamente)
 
 ## Requisitos
 

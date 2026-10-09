@@ -5,117 +5,120 @@ static const char* tbf_gui_toolbar_labels[] = { "1/s", "5/s", "20/s", "100/s", "
 
 #define TBF_GUI_TOOLBAR_SPEEDS ((int) (sizeof(tbf_gui_toolbar_rates) / sizeof(tbf_gui_toolbar_rates[0])))
 
-void tbf_gui_toolbar_init(TbfGuiToolbar* self)
+void tbf_gui_toolbar_init(TbfGui_Toolbar* self)
 {
     self->speed = TBF_GUI_TOOLBAR_SPEEDS - 1;
 }
 
-void tbf_gui_toolbar_slower(TbfGuiToolbar* self)
+void tbf_gui_toolbar_slower(TbfGui_Toolbar* self)
 {
     if (self->speed > 0) {
         self->speed--;
     }
 }
 
-void tbf_gui_toolbar_faster(TbfGuiToolbar* self)
+void tbf_gui_toolbar_faster(TbfGui_Toolbar* self)
 {
     if (self->speed < TBF_GUI_TOOLBAR_SPEEDS - 1) {
         self->speed++;
     }
 }
 
-int tbf_gui_toolbar_rate(const TbfGuiToolbar* self)
+int tbf_gui_toolbar_rate(const TbfGui_Toolbar* self)
 {
     return tbf_gui_toolbar_rates[self->speed];
 }
 
-static void tbf_gui_toolbar_draw_status(const TbfGuiFonts* fonts, const TbfGuiDebugger* debugger, float x, float y)
+static void tbf_gui_toolbar_draw_status(const TbfGui_Style* style, const TbfGui_Debugger* debugger, float x, float center_y)
 {
+    const TbfGui_Theme* theme = style->theme;
     const char* status = "Sem programa";
-    Color color = TBF_GUI_COLOR_DIM;
+    Color color = theme->outline;
 
     switch (debugger->state) {
     case TBF_GUI_DEBUGGER_PAUSED:
         status = "Pausado";
-        color = TBF_GUI_COLOR_HIGHLIGHT;
+        color = theme->warning;
         break;
 
     case TBF_GUI_DEBUGGER_RUNNING:
         status = "Executando";
-        color = TBF_GUI_COLOR_SUCCESS;
+        color = theme->success;
         break;
 
     case TBF_GUI_DEBUGGER_WAITING_INPUT:
         status = "Aguardando entrada";
-        color = TBF_GUI_COLOR_ACCENT;
+        color = theme->primary;
         break;
 
     case TBF_GUI_DEBUGGER_HALTED:
         status = "Finalizado";
+        color = theme->on_surface_variant;
         break;
 
     case TBF_GUI_DEBUGGER_FAILED:
         status = TextFormat("Erro: %s", debugger->error);
-        color = TBF_GUI_COLOR_BREAKPOINT;
+        color = theme->error;
         break;
 
     default:
         break;
     }
 
-    DrawCircle(x, y + 16, 6, color);
-    tbf_gui_text(fonts->regular, status, x + 14, y + 7, TBF_GUI_COLOR_TEXT);
+    TbfMath_Vector2 size = tbf_gui_text_size(style->fonts.label, status);
+    Rectangle chip = { x, center_y - 16, size.x + 44, 32 };
+
+    tbf_gui_rounded_lines(chip, 8, 1, theme->outline_variant);
+    tbf_gui_circle(tbf_math_vector2(chip.x + 18, center_y), 5, color);
+    tbf_gui_text(style->fonts.label, status, chip.x + 32, center_y - size.y / 2, theme->on_surface);
 }
 
-static void tbf_gui_toolbar_draw_info(const TbfGuiFonts* fonts, const TbfGuiDebugger* debugger, Rectangle rect)
+TbfGui_Action tbf_gui_toolbar_draw(const TbfGui_Toolbar* self, const TbfGui_Style* style, const TbfGui_Debugger* debugger, Rectangle rect)
 {
-    if (debugger->vm == NULL) {
-        return;
-    }
-
-    const char* info = TextFormat("passos %llu   ip %u   tp %u", debugger->steps, debugger->vm->ip, debugger->vm->tp);
-    Vector2 size = MeasureTextEx(fonts->small, info, fonts->small.baseSize, 0);
-
-    tbf_gui_text(fonts->small, info, rect.x + rect.width - size.x, rect.y + 9, TBF_GUI_COLOR_DIM);
-}
-
-TbfGuiAction tbf_gui_toolbar_draw(const TbfGuiToolbar* self, const TbfGuiFonts* fonts, const TbfGuiDebugger* debugger, Rectangle rect)
-{
-    TbfGuiAction action = TBF_GUI_ACTION_NONE;
+    const TbfGui_Theme* theme = style->theme;
+    TbfGui_Action action = TBF_GUI_ACTION_NONE;
     float x = rect.x;
     float y = rect.y;
+    float center_y = rect.y + rect.height / 2;
 
-    const char* run_label = tbf_gui_debugger_is_running(debugger) ? "Pausar (F5)" : "Executar (F5)";
+    bool running = tbf_gui_debugger_is_running(debugger);
+    int run_icon = running ? TBF_GUI_ICON_PAUSE : TBF_GUI_ICON_PLAY;
+    const char* run_label = running ? "Pausar (F5)" : "Executar (F5)";
 
-    if (tbf_gui_button(fonts, (Rectangle) { x, y, 140, 32 }, run_label, tbf_gui_debugger_can_run(debugger))) {
+    if (tbf_gui_button(style, (Rectangle) { x, y, 152, 40 }, TBF_GUI_BUTTON_FILLED, run_icon, run_label, tbf_gui_debugger_can_run(debugger))) {
         action = TBF_GUI_ACTION_TOGGLE_RUN;
     }
 
-    if (tbf_gui_button(fonts, (Rectangle) { x + 148, y, 130, 32 }, "Passo (F10)", debugger->state == TBF_GUI_DEBUGGER_PAUSED)) {
+    if (tbf_gui_button(style, (Rectangle) { x + 160, y, 136, 40 }, TBF_GUI_BUTTON_TONAL, TBF_GUI_ICON_STEP, "Passo (F10)", debugger->state == TBF_GUI_DEBUGGER_PAUSED)) {
         action = TBF_GUI_ACTION_STEP;
     }
 
-    if (tbf_gui_button(fonts, (Rectangle) { x + 286, y, 150, 32 }, "Reiniciar (F2)", debugger->loaded)) {
+    if (tbf_gui_button(style, (Rectangle) { x + 304, y, 132, 40 }, TBF_GUI_BUTTON_TONAL, TBF_GUI_ICON_SKIP, "Pular (F11)", debugger->state == TBF_GUI_DEBUGGER_PAUSED)) {
+        action = TBF_GUI_ACTION_SKIP;
+    }
+
+    if (tbf_gui_button(style, (Rectangle) { x + 444, y, 156, 40 }, TBF_GUI_BUTTON_OUTLINED, TBF_GUI_ICON_RESET, "Reiniciar (F2)", debugger->loaded)) {
         action = TBF_GUI_ACTION_RESET;
     }
 
-    tbf_gui_text(fonts->small, "Velocidade", x + 456, y + 9, TBF_GUI_COLOR_DIM);
+    TbfMath_Vector2 caption = tbf_gui_text_size(style->fonts.body, "Velocidade");
 
-    if (tbf_gui_button(fonts, (Rectangle) { x + 540, y, 32, 32 }, "-", self->speed > 0)) {
+    tbf_gui_text(style->fonts.body, "Velocidade", x + 632, center_y - caption.y / 2, theme->on_surface_variant);
+
+    if (tbf_gui_icon_button(style, (Rectangle) { x + 712, y, 40, 40 }, TBF_GUI_ICON_REMOVE, self->speed > 0)) {
         action = TBF_GUI_ACTION_SLOWER;
     }
 
     const char* label = tbf_gui_toolbar_labels[self->speed];
-    Vector2 size = MeasureTextEx(fonts->regular, label, fonts->regular.baseSize, 0);
+    TbfMath_Vector2 size = tbf_gui_text_size(style->fonts.label, label);
 
-    tbf_gui_text(fonts->regular, label, x + 576 + (90 - size.x) / 2, y + 7, TBF_GUI_COLOR_TEXT);
+    tbf_gui_text(style->fonts.label, label, x + 756 + (64 - size.x) / 2, center_y - size.y / 2, theme->on_surface);
 
-    if (tbf_gui_button(fonts, (Rectangle) { x + 670, y, 32, 32 }, "+", self->speed < TBF_GUI_TOOLBAR_SPEEDS - 1)) {
+    if (tbf_gui_icon_button(style, (Rectangle) { x + 824, y, 40, 40 }, TBF_GUI_ICON_ADD, self->speed < TBF_GUI_TOOLBAR_SPEEDS - 1)) {
         action = TBF_GUI_ACTION_FASTER;
     }
 
-    tbf_gui_toolbar_draw_status(fonts, debugger, x + 730, y);
-    tbf_gui_toolbar_draw_info(fonts, debugger, rect);
+    tbf_gui_toolbar_draw_status(style, debugger, x + 896, center_y);
 
     return action;
 }

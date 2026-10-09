@@ -5,7 +5,7 @@
 
 int tbf_gui_run(const char* path)
 {
-    static TbfGuiApp app;
+    static TbfGui_App app;
 
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
     InitWindow(TBF_GUI_WINDOW_WIDTH, TBF_GUI_WINDOW_HEIGHT, "TinyBf");
