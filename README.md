@@ -26,6 +26,10 @@ A interface gráfica também pode ser aberta com `./bin/tbf --gui [ARQUIVO]` e a
 
 A interface segue o Material Design 3, usa as fontes Roboto e Roboto Mono com ícones Material Icons e tem um switch no canto superior direito para alternar entre os modos claro e escuro.
 
+![Interface gráfica no modo escuro](docs/gui-escuro.png)
+
+![Interface gráfica no modo claro](docs/gui-claro.png)
+
 ## Dependências
 
 * GCC (GNU Compiler Collection) versão 9 ou superior
