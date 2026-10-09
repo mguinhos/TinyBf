@@ -55,5 +55,6 @@ dkms.conf
 *.dwo
 
 # Project specific
-/bin/main/bin/gui
+/bin/main
+/bin/gui
 /thirdparty/
